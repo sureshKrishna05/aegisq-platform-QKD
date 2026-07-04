@@ -2,7 +2,7 @@ package qkd
 
 import (
 	"fmt"
-	"path/filepath"
+
 	"testing"
 )
 
@@ -14,7 +14,7 @@ func TestGenerateSessionKey(t *testing.T) {
 	// in a shell script or adjust our Go code to use the venv python if testing directly,
 	// but for this prototype, we'll assume `python3` in the environment has the modules,
 	// or we point to the venv python.
-	venvPython, _ := filepath.Abs("../../../qkd_engine/venv/bin/python3")
+	// The virtual environment python is provided via PATH in the command.
 
 	engine := &Engine{
 		PythonScriptPath: scriptPath,
@@ -25,8 +25,6 @@ func TestGenerateSessionKey(t *testing.T) {
 	// this test just serves as a skeleton for local execution.
 	fmt.Printf("Make sure to run this test with a python environment that has qiskit installed.\n")
 
-	// Uncomment to actually test when environment is ready:
-	/*
 	res, err := engine.GenerateSessionKey(1024, false, 0.0)
 	if err != nil {
 		t.Fatalf("Failed to generate key: %v", err)
@@ -39,5 +37,7 @@ func TestGenerateSessionKey(t *testing.T) {
 	if len(res.SymmetricKeyHex) != 64 {
 		t.Errorf("Expected 32-byte hex key (64 chars), got %d chars", len(res.SymmetricKeyHex))
 	}
-	*/
+	
+	fmt.Printf("Generated Key: %s\n", res.SymmetricKeyHex)
+	fmt.Printf("QBER: %f\n", res.QBER)
 }

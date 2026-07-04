@@ -12,6 +12,7 @@ import (
 	"github.com/sureshKrishna05/aegisq-framework/core/crypto"
 	"github.com/sureshKrishna05/aegisq-framework/core/event"
 	"github.com/sureshKrishna05/aegisq-framework/core/identity"
+	"github.com/sureshKrishna05/aegisq-framework/core/network/qkd"
 	"github.com/sureshKrishna05/aegisq-framework/core/scheduler"
 	"github.com/sureshKrishna05/aegisq-framework/core/simulation"
 	"github.com/sureshKrishna05/aegisq-framework/core/storage"
@@ -98,6 +99,26 @@ func main() {
 	}
 
 	fmt.Println("Validators initialized.")
+
+	// NEW: Initialize QKD Engine and generate keys
+	fmt.Println("Initializing QKD Engine (BB84)...")
+	// Using relative path assuming we run from project root
+	qkdEngine := qkd.NewEngine("qkd_engine/bb84_sim.py")
+
+	secureChannels := make(map[uint64]*qkd.SecureChannel)
+	for _, v := range validators {
+		fmt.Printf("Establishing Quantum Session Key for Validator %d...\n", v.ValidatorID)
+		res, err := qkdEngine.GenerateSessionKey(1024, false, 0.0)
+		if err != nil {
+			log.Fatalf("QKD Failed: %v", err)
+		}
+		channel, err := qkd.NewSecureChannelFromHex(res.SymmetricKeyHex)
+		if err != nil {
+			log.Fatalf("Secure channel failed: %v", err)
+		}
+		secureChannels[v.ValidatorID] = channel
+	}
+	fmt.Println("All secure channels established.")
 
 	vs := consensus.NewValidatorSet()
 	for _, v := range validators {
@@ -197,7 +218,26 @@ func main() {
 			View:        view,
 			Type:        consensus.Prepare,
 		}
-		_ = votePool.AddVote(vote)
+
+		// QKD ENCRYPTION LAYER
+		channel := secureChannels[v.ValidatorID]
+		ciphertext, err := channel.Encrypt(vote.SerializeAQX())
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("[QKD NETWORK] Encrypted PREPARE vote from Validator %d. Ciphertext (first 16 bytes): %x...\n", v.ValidatorID, ciphertext[:16])
+
+		// QKD DECRYPTION LAYER
+		plaintext, err := channel.Decrypt(ciphertext)
+		if err != nil {
+			log.Fatal(err)
+		}
+		decryptedVote, err := consensus.DeserializeAQX(plaintext)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_ = votePool.AddVote(*decryptedVote)
 	}
 
 	if !votePool.HasQuorum(blockHashArray, view, consensus.Prepare) {
@@ -213,7 +253,26 @@ func main() {
 			View:        view,
 			Type:        consensus.Commit,
 		}
-		_ = votePool.AddVote(vote)
+
+		// QKD ENCRYPTION LAYER
+		channel := secureChannels[v.ValidatorID]
+		ciphertext, err := channel.Encrypt(vote.SerializeAQX())
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("[QKD NETWORK] Encrypted COMMIT vote from Validator %d. Ciphertext (first 16 bytes): %x...\n", v.ValidatorID, ciphertext[:16])
+
+		// QKD DECRYPTION LAYER
+		plaintext, err := channel.Decrypt(ciphertext)
+		if err != nil {
+			log.Fatal(err)
+		}
+		decryptedVote, err := consensus.DeserializeAQX(plaintext)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_ = votePool.AddVote(*decryptedVote)
 	}
 
 	if !votePool.HasQuorum(blockHashArray, view, consensus.Commit) {
