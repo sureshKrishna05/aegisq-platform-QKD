@@ -42,7 +42,7 @@ The framework is **not a complete governance platform**. Instead, it serves as t
           PebbleDB Ledger + LRU Cache
                        │
                        ▼
-             REST API & Explorer
+             REST API
 ```
 
 ---
@@ -58,7 +58,7 @@ The framework is **not a complete governance platform**. Instead, it serves as t
 * ✅ LRU caching for high-performance reads
 * ✅ Database integrity verification and crash recovery
 * ✅ Transaction and block separation for efficient storage
-* ✅ REST API and Blockchain Explorer
+* ✅ REST API
 * ✅ Comprehensive unit and integration testing
 
 ---
@@ -74,7 +74,7 @@ This repository currently implements the **blockchain infrastructure** of AegisQ
 * Consensus engine
 * Ledger management
 * Persistent storage
-* Explorer APIs
+* Node APIs
 
 ---
 
@@ -105,7 +105,7 @@ The following components belong to the broader **AegisQ Platform** and are **not
 | Storage       | PebbleDB                           |
 | Caching       | LRU Cache                          |
 | API           | REST                               |
-| Explorer      | Next.js                            |
+
 | Testing       | Go Testing Framework               |
 
 ---
@@ -143,7 +143,7 @@ Finalize Block
 Persist to PebbleDB
       │
       ▼
-Serve Explorer APIs
+Serve Node APIs
 ```
 
 ---
