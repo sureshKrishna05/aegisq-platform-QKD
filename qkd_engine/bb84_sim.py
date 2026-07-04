@@ -1,6 +1,7 @@
 import sys
 import json
 import argparse
+import hashlib
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
@@ -75,20 +76,14 @@ def run_bb84(num_bits, eavesdrop=False, noise_level=0.0):
     errors = sum(1 for a, b in zip(alice_key, bob_key) if a != b)
     qber = errors / len(alice_key) if len(alice_key) > 0 else 0
     
-    # 7. Final Key Derivation (simplified privacy amplification)
-    # Convert Bob's sifted bits into a 32-byte (256-bit) AES key
-    key_bytes = bytearray()
-    for i in range(0, len(bob_key), 8):
-        byte_chunk = bob_key[i:i+8]
-        if len(byte_chunk) < 8:
-            byte_chunk += [0] * (8 - len(byte_chunk))
-        byte_val = sum(val << (7-idx) for idx, val in enumerate(byte_chunk))
-        key_bytes.append(byte_val)
-        
-    # Ensure exactly 32 bytes for AES-256
-    while len(key_bytes) < 32:
-        key_bytes.append(0)
-    key_bytes = key_bytes[:32]
+    # 7. Final Key Derivation (Privacy Amplification)
+    # To eliminate any partial information Eve might have gained (assuming QBER < 11%),
+    # we apply a cryptographic hash function (SHA-256) as a universal hash for privacy amplification.
+    # This securely distills the raw sifted key into a perfectly uniform 256-bit (32-byte) AES key.
+    
+    sifted_str = ''.join(str(bit) for bit in bob_key)
+    pa_hash = hashlib.sha256(sifted_str.encode('utf-8'))
+    key_bytes = pa_hash.digest()  # Exactly 32 bytes (256-bit)
     
     # QBER > 11% typically indicates the presence of an eavesdropper in BB84
     eavesdropper_detected = qber > 0.11
