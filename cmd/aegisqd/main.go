@@ -100,10 +100,10 @@ func main() {
 
 	fmt.Println("Validators initialized.")
 
-	// NEW: Initialize QKD Engine and generate keys
-	fmt.Println("Initializing QKD Engine (BB84)...")
+	// NEW: Initialize QKD Engine using REAL IBM HARDWARE
+	fmt.Println("Initializing QKD Engine (IBM Quantum Hardware)...")
 	// Using relative path assuming we run from project root
-	qkdEngine := qkd.NewEngine("qkd_engine/bb84_sim.py")
+	qkdEngine := qkd.NewEngine("qkd_engine/bb84_hardware.py")
 
 	secureChannels := make(map[uint64]*qkd.SecureChannel)
 	for _, v := range validators {
