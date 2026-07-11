@@ -2,7 +2,7 @@
 
 # 🛡️ AegisQKD
 
-An experimental framework demonstrating the integration of Post-Quantum Cryptography (PQC) and Quantum Key Distribution (QKD) into a distributed validator communication architecture using Go, Qiskit, and IBM Quantum.
+An experimental framework demonstrating the integration of Post-Quantum Cryptography (PQC) and Quantum Key Distribution (QKD) into a distributed blockchain architecture using Go, Qiskit, and IBM Quantum.
 
 </div>
 
@@ -10,6 +10,17 @@ An experimental framework demonstrating the integration of Post-Quantum Cryptogr
 > AegisQKD is an experimental research framework intended for education, prototyping, and research. It is **not** intended for production deployment or real-world cryptographic infrastructure.
 
 *AegisQKD is an open-source framework that demonstrates how quantum key distribution protocols implemented with Qiskit can be integrated into modern distributed systems. The project aims to serve as an educational and research reference for developers exploring the intersection of quantum computing, post-quantum cryptography, and secure networked applications.*
+
+## Research Scope
+
+AegisQKD is intended as an educational and experimental framework for exploring the integration of Quantum Key Distribution (QKD) and Post-Quantum Cryptography (PQC) into distributed systems.
+
+The project demonstrates:
+- Integration of Qiskit with Go-based applications.
+- BB84-based quantum key establishment using Qiskit Aer and IBM Quantum.
+- Secure communication concepts within a PBFT-style consensus architecture.
+
+It does not claim to provide production-ready quantum networking or unconditional security.
 
 ---
 
@@ -82,7 +93,7 @@ AegisQKD is designed to be modular. It currently supports:
 
 ## What is AQX?
 
-**AQX (AegisQ Serialization)** is a custom, deterministic binary serialization protocol built specifically for this framework. Traditional serialization methods (like JSON or Protobuf) can produce varying byte arrays for the exact same data structure depending on map ordering or language implementations. This breaks cryptographic hashing. AQX guarantees that a transaction or consensus vote will *always* serialize into the exact same byte slice across every node, ensuring PBFT block hashes are perfectly consistent across the decentralized network before they are encrypted by the QKD AES keys.
+**AQX (AegisQ Exchange format)** is a custom, deterministic binary serialization protocol built specifically for this framework. Traditional serialization methods (like JSON or Protobuf) can produce varying byte arrays for the exact same data structure depending on map ordering or language implementations. This breaks cryptographic hashing. AQX guarantees that a transaction or consensus vote will *always* serialize into the exact same byte slice across every node, ensuring PBFT block hashes are perfectly consistent across the decentralized network before they are encrypted by the QKD AES keys.
 
 ---
 
@@ -193,7 +204,7 @@ If you use AegisQKD in your research or educational materials, please cite this 
 ```text
 @misc{aegisqkd2026,
   author       = {Suresh Krishna R},
-  title        = {AegisQKD: An Experimental Framework for Integrating Post-Quantum Cryptography and Quantum Key Distribution into Distributed Systems},
+  title        = {AegisQKD: Experimental Implementation of PQC and QKD into Distributed Blockchain System},
   year         = {2026},
   howpublished = {GitHub repository},
   note         = {Available at: https://github.com/sureshKrishna05/aegisq-platform-QKD (Accessed: 2026-07-12)}
