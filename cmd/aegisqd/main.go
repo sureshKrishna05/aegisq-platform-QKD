@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sureshKrishna05/aegisq-framework/core/block"
@@ -80,10 +82,13 @@ func main() {
 		return
 	}
 
+	fmt.Println("\n--- IDENTITY LAYER ---")
+	startDilithium := time.Now()
 	signer, err := crypto.NewDilithiumSigner()
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("[BENCHMARK] ML-DSA-44 (Dilithium2) Keypair generated in %v\n", time.Since(startDilithium))
 
 	var validators []*identity.NodeIdentity
 	for i := 1; i <= 4; i++ {
@@ -100,14 +105,32 @@ func main() {
 
 	fmt.Println("Validators initialized.")
 
-	// NEW: Initialize QKD Engine using REAL IBM HARDWARE
-	fmt.Println("Initializing QKD Engine (IBM Quantum Hardware)...")
-	// Using relative path assuming we run from project root
-	qkdEngine := qkd.NewEngine("qkd_engine/bb84_hardware.py")
+	fmt.Println("\n===========================================")
+	fmt.Println(" Select QKD Engine Execution Mode:")
+	fmt.Println(" 1) Local Simulation (Fast, no queue)")
+	fmt.Println(" 2) Real IBM Quantum Hardware (Requires IBM_QUANTUM_TOKEN)")
+	fmt.Println("===========================================")
+	fmt.Print("Enter choice (1 or 2) [Default: 1]: ")
+
+	reader := bufio.NewReader(os.Stdin)
+	choice, _ := reader.ReadString('\n')
+	choice = strings.TrimSpace(choice)
+
+	var engineScript string
+	if choice == "2" {
+		fmt.Println("\nInitializing QKD Engine (IBM Quantum Hardware)...")
+		engineScript = "qkd_engine/bb84_hardware.py"
+	} else {
+		fmt.Println("\nInitializing QKD Engine (Local Simulation)...")
+		engineScript = "qkd_engine/bb84_sim.py"
+	}
+
+	qkdEngine := qkd.NewEngine(engineScript)
 
 	secureChannels := make(map[uint64]*qkd.SecureChannel)
 	for _, v := range validators {
 		fmt.Printf("Establishing Quantum Session Key for Validator %d...\n", v.ValidatorID)
+		startQKD := time.Now()
 		res, err := qkdEngine.GenerateSessionKey(1024, false, 0.0)
 		if err != nil {
 			log.Fatalf("QKD Failed: %v", err)
@@ -117,6 +140,7 @@ func main() {
 			log.Fatalf("Secure channel failed: %v", err)
 		}
 		secureChannels[v.ValidatorID] = channel
+		fmt.Printf("[BENCHMARK] QKD Channel Established in %v | QBER: %.2f%%\n", time.Since(startQKD), res.QBER*100)
 	}
 	fmt.Println("All secure channels established.")
 
@@ -189,9 +213,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("\n--- TRANSACTION LAYER ---")
 	fmt.Println("Generated synthetic storage transactions:", len(txs))
-	fmt.Println("Transaction generation time:", time.Since(startTx))
+	fmt.Printf("[BENCHMARK] ML-DSA-44 Signed 10,000 Transactions in %v\n", time.Since(startTx))
 
+	fmt.Println("\n--- CONSENSUS LAYER ---")
 	startFinalize := time.Now()
 	newBlock := block.NewBlock(
 		height+1,
@@ -220,22 +246,34 @@ func main() {
 		}
 
 		// QKD ENCRYPTION LAYER
+		startAQX := time.Now()
+		aqxBytes := vote.SerializeAQX()
+		serializeTime := time.Since(startAQX)
+
+		startEnc := time.Now()
 		channel := secureChannels[v.ValidatorID]
-		ciphertext, err := channel.Encrypt(vote.SerializeAQX())
+		ciphertext, err := channel.Encrypt(aqxBytes)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("[QKD NETWORK] Encrypted PREPARE vote from Validator %d. Ciphertext (first 16 bytes): %x...\n", v.ValidatorID, ciphertext[:16])
+		encTime := time.Since(startEnc)
+		fmt.Printf("[QKD NETWORK] PREPARE Vote Validator %d | AQX Serialization: %v | AES-256 Encrypt: %v | Ciphertext: %x...\n", v.ValidatorID, serializeTime, encTime, ciphertext[:16])
 
 		// QKD DECRYPTION LAYER
+		startDec := time.Now()
 		plaintext, err := channel.Decrypt(ciphertext)
 		if err != nil {
 			log.Fatal(err)
 		}
+		decTime := time.Since(startDec)
+
+		startDeAQX := time.Now()
 		decryptedVote, err := consensus.DeserializeAQX(plaintext)
 		if err != nil {
 			log.Fatal(err)
 		}
+		deSerializeTime := time.Since(startDeAQX)
+		fmt.Printf("[QKD NETWORK] DECRYPT Validator %d | AES-256 Decrypt: %v | AQX Deserialize: %v\n", v.ValidatorID, decTime, deSerializeTime)
 
 		_ = votePool.AddVote(*decryptedVote)
 	}
@@ -255,22 +293,34 @@ func main() {
 		}
 
 		// QKD ENCRYPTION LAYER
+		startAQX := time.Now()
+		aqxBytes := vote.SerializeAQX()
+		serializeTime := time.Since(startAQX)
+
+		startEnc := time.Now()
 		channel := secureChannels[v.ValidatorID]
-		ciphertext, err := channel.Encrypt(vote.SerializeAQX())
+		ciphertext, err := channel.Encrypt(aqxBytes)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("[QKD NETWORK] Encrypted COMMIT vote from Validator %d. Ciphertext (first 16 bytes): %x...\n", v.ValidatorID, ciphertext[:16])
+		encTime := time.Since(startEnc)
+		fmt.Printf("[QKD NETWORK] COMMIT Vote Validator %d | AQX Serialization: %v | AES-256 Encrypt: %v | Ciphertext: %x...\n", v.ValidatorID, serializeTime, encTime, ciphertext[:16])
 
 		// QKD DECRYPTION LAYER
+		startDec := time.Now()
 		plaintext, err := channel.Decrypt(ciphertext)
 		if err != nil {
 			log.Fatal(err)
 		}
+		decTime := time.Since(startDec)
+
+		startDeAQX := time.Now()
 		decryptedVote, err := consensus.DeserializeAQX(plaintext)
 		if err != nil {
 			log.Fatal(err)
 		}
+		deSerializeTime := time.Since(startDeAQX)
+		fmt.Printf("[QKD NETWORK] DECRYPT Validator %d | AES-256 Decrypt: %v | AQX Deserialize: %v\n", v.ValidatorID, decTime, deSerializeTime)
 
 		_ = votePool.AddVote(*decryptedVote)
 	}
